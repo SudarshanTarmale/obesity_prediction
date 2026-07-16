@@ -1,249 +1,245 @@
 """
-Data Preprocessing Pipeline
+Data Preprocessing Module
+
+This module loads the raw obesity dataset, performs data validation,
+cleans the data, engineers additional features, and creates train/test
+datasets for model training.
 
 Author: Your Name
 """
 
+from pathlib import Path
+
 import pandas as pd
-
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder
-from sklearn.preprocessing import StandardScaler
 
-from src.config import *
-from src.utils import save_object
+from src.config import (
+    RAW_DATA_PATH,
+    PROCESSED_DATA_DIR,
+    TARGET_COLUMN,
+    TARGET_CLASSES,
+    TEST_SIZE,
+    RANDOM_STATE,
+)
+
+from src.utils import create_directories
 
 
 class DataPreprocessor:
+    """
+    Handles loading, validation, cleaning and preparation
+    of the obesity dataset.
+    """
 
     def __init__(self):
 
-        self.df = None
+        self.df = pd.DataFrame()
 
-        self.label_encoders = {}
+    # ==========================================================
+    # Load Dataset
+    # ==========================================================
 
-        self.target_encoder = LabelEncoder()
+    def load_data(self) -> None:
 
-        self.scaler = StandardScaler()
+        print("\nLoading dataset...")
 
-    # -----------------------------------------------------
+        if not RAW_DATA_PATH.exists():
 
-    def load_data(self):
-
-        print("Loading dataset...")
-
-        self.df = pd.read_csv(RAW_DATA)
-
-        print(f"Dataset Shape : {self.df.shape}")
-
-    # -----------------------------------------------------
-
-    def clean_data(self):
-
-        print("Cleaning dataset...")
-
-        self.df.drop_duplicates(inplace=True)
-
-        self.df.reset_index(drop=True, inplace=True)
-
-    # -----------------------------------------------------
-
-    def feature_engineering(self):
-
-        print("Creating BMI feature...")
-
-        self.df["BMI"] = self.df["Weight"] / (
-            self.df["Height"] ** 2
-        )
-
-    # -----------------------------------------------------
-
-    def encode_features(self):
-
-        categorical_columns = [
-
-            "Gender",
-
-            "family_history_with_overweight",
-
-            "FAVC",
-
-            "CAEC",
-
-            "SMOKE",
-
-            "SCC",
-
-            "CALC",
-
-            "MTRANS"
-
-        ]
-
-        for column in categorical_columns:
-
-            encoder = LabelEncoder()
-
-            self.df[column] = encoder.fit_transform(
-                self.df[column]
+            raise FileNotFoundError(
+                f"Dataset not found:\n{RAW_DATA_PATH}"
             )
 
-            self.label_encoders[column] = encoder
+        self.df = pd.read_csv(RAW_DATA_PATH)
 
-        self.df["NObeyesdad"] = self.target_encoder.fit_transform(
-            self.df["NObeyesdad"]
+        print(f"Dataset Loaded Successfully")
+        print(f"Shape : {self.df.shape}")
+
+    # ==========================================================
+    # Validate Dataset
+    # ==========================================================
+
+    def validate_dataset(self) -> None:
+
+        print("\nValidating dataset...")
+
+        if self.df.empty:
+
+            raise ValueError("Dataset is empty.")
+
+        if TARGET_COLUMN not in self.df.columns:
+
+            raise ValueError(
+                f"Target column '{TARGET_COLUMN}' not found."
+            )
+
+        if self.df.isnull().sum().sum() > 0:
+
+            print("Missing values found.")
+
+        else:
+
+            print("No missing values found.")
+
+        print("Validation Complete")
+
+    # ==========================================================
+    # Clean Dataset
+    # ==========================================================
+
+    def clean_data(self) -> None:
+
+        print("\nCleaning dataset...")
+
+        duplicate_rows = self.df.duplicated().sum()
+
+        if duplicate_rows > 0:
+
+            self.df.drop_duplicates(inplace=True)
+
+            self.df.reset_index(drop=True, inplace=True)
+
+            print(f"Removed {duplicate_rows} duplicate rows.")
+
+        else:
+
+            print("No duplicate rows found.")
+
+    # ==========================================================
+    # Feature Engineering
+    # ==========================================================
+
+    def feature_engineering(self) -> None:
+
+        print("\nCreating BMI feature...")
+
+        self.df["BMI"] = (
+            self.df["Weight"] /
+            (self.df["Height"] ** 2)
         )
 
-    # -----------------------------------------------------
+        print("BMI Feature Added.")
 
-    def split_data(self):
+    # ==========================================================
+    # Target Encoding
+    # ==========================================================
 
-        X = self.df.drop("NObeyesdad", axis=1)
+    def encode_target(self) -> None:
 
-        y = self.df["NObeyesdad"]
+        print("\nEncoding target labels...")
 
-        return train_test_split(
+        mapping = {
 
-            X,
+            label: index
 
-            y,
+            for index, label in enumerate(TARGET_CLASSES)
+
+        }
+
+        self.df[TARGET_COLUMN] = self.df[TARGET_COLUMN].map(mapping)
+
+        if self.df[TARGET_COLUMN].isnull().sum() > 0:
+
+            raise ValueError(
+                "Unknown class detected in target column."
+            )
+
+        self.df[TARGET_COLUMN] = (
+            self.df[TARGET_COLUMN].astype(int)
+        )
+
+    # ==========================================================
+    # Train Test Split
+    # ==========================================================
+
+    def split_dataset(self):
+
+        print("\nCreating Train/Test Split...")
+
+        train_df, test_df = train_test_split(
+
+            self.df,
 
             test_size=TEST_SIZE,
 
             random_state=RANDOM_STATE,
 
-            stratify=y
+            stratify=self.df[TARGET_COLUMN]
 
         )
 
-    # -----------------------------------------------------
+        print(f"Training Samples : {len(train_df)}")
+        print(f"Testing Samples  : {len(test_df)}")
 
-    def scale_data(self, X_train, X_test):
+        return train_df, test_df
 
-        numerical_columns = [
-
-            "Age",
-
-            "Height",
-
-            "Weight",
-
-            "FCVC",
-
-            "NCP",
-
-            "CH2O",
-
-            "FAF",
-
-            "TUE",
-
-            "BMI"
-
-        ]
-
-        X_train[numerical_columns] = self.scaler.fit_transform(
-            X_train[numerical_columns]
-        )
-
-        X_test[numerical_columns] = self.scaler.transform(
-            X_test[numerical_columns]
-        )
-
-        return X_train, X_test
-
-    # -----------------------------------------------------
+    # ==========================================================
+    # Save Processed Dataset
+    # ==========================================================
 
     def save_processed_data(
 
         self,
 
-        X_train,
+        train_df,
 
-        X_test,
+        test_df
 
-        y_train,
+    ) -> None:
 
-        y_test
+        print("\nSaving processed dataset...")
 
-    ):
+        create_directories()
 
-        PROCESSED_DATA_DIR.mkdir(
-            parents=True,
-            exist_ok=True
-        )
+        train_df.to_csv(
 
-        X_train.to_csv(
-            PROCESSED_DATA_DIR / "X_train.csv",
+            PROCESSED_DATA_DIR / "train.csv",
+
             index=False
+
         )
 
-        X_test.to_csv(
-            PROCESSED_DATA_DIR / "X_test.csv",
+        test_df.to_csv(
+
+            PROCESSED_DATA_DIR / "test.csv",
+
             index=False
+
         )
 
-        y_train.to_csv(
-            PROCESSED_DATA_DIR / "y_train.csv",
-            index=False
-        )
+        print("Processed datasets saved successfully.")
 
-        y_test.to_csv(
-            PROCESSED_DATA_DIR / "y_test.csv",
-            index=False
-        )
-
-        save_object(
-            self.scaler,
-            SCALER_FILE
-        )
-
-        save_object(
-            self.label_encoders,
-            LABEL_ENCODERS_FILE
-        )
-
-        save_object(
-            self.target_encoder,
-            TARGET_ENCODER_FILE
-        )
-
-    # -----------------------------------------------------
+    # ==========================================================
+    # Pipeline
+    # ==========================================================
 
     def preprocess(self):
 
         self.load_data()
 
+        self.validate_dataset()
+
         self.clean_data()
 
         self.feature_engineering()
 
-        self.encode_features()
+        self.encode_target()
 
-        X_train, X_test, y_train, y_test = self.split_data()
-
-        X_train, X_test = self.scale_data(
-
-            X_train,
-
-            X_test
-
-        )
+        train_df, test_df = self.split_dataset()
 
         self.save_processed_data(
 
-            X_train,
+            train_df,
 
-            X_test,
-
-            y_train,
-
-            y_test
+            test_df
 
         )
 
         print("\nPreprocessing Completed Successfully!")
 
+
+# ==============================================================
+# Main
+# ==============================================================
 
 if __name__ == "__main__":
 
