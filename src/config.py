@@ -4,25 +4,36 @@ Project Configuration
 
 from pathlib import Path
 
-# Root Directory
+# -----------------------------------------------------------------------------
+# Paths
+# -----------------------------------------------------------------------------
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Data
-RAW_DATA = BASE_DIR / "data" / "raw" / "ObesityDataSet_raw_and_data_sinthetic.csv"
+DATA_DIR = BASE_DIR / "data"
 
-PROCESSED_DATA = BASE_DIR / "data" / "processed"
+RAW_DATA = DATA_DIR / "raw" / "ObesityDataSet_raw_and_data_sinthetic.csv"
 
-# Models
+PROCESSED_DATA_DIR = DATA_DIR / "processed"
+
 MODEL_DIR = BASE_DIR / "models"
+
+# -----------------------------------------------------------------------------
+# Saved Artifacts
+# -----------------------------------------------------------------------------
 
 MODEL_FILE = MODEL_DIR / "obesity_model.pkl"
 
 SCALER_FILE = MODEL_DIR / "scaler.pkl"
 
-ENCODER_FILE = MODEL_DIR / "label_encoder.pkl"
+LABEL_ENCODERS_FILE = MODEL_DIR / "label_encoders.pkl"
 
-# Random State
-RANDOM_STATE = 42
+TARGET_ENCODER_FILE = MODEL_DIR / "target_encoder.pkl"
 
-# Test Split
+# -----------------------------------------------------------------------------
+# Dataset Split
+# -----------------------------------------------------------------------------
+
 TEST_SIZE = 0.20
+
+RANDOM_STATE = 42
