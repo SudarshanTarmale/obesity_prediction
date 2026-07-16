@@ -5,13 +5,22 @@ This module loads the raw obesity dataset, performs data validation,
 cleans the data, engineers additional features, and creates train/test
 datasets for model training.
 
-Author: Your Name
+Author: Sudarshan Tarmale
 """
 
 from pathlib import Path
 
 import pandas as pd
 from sklearn.model_selection import train_test_split
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.preprocessing import StandardScaler
+from sklearn.impute import SimpleImputer
+from src.config import (
+    NUMERICAL_FEATURES,
+    CATEGORICAL_FEATURES,
+)
 
 from src.config import (
     RAW_DATA_PATH,
@@ -119,6 +128,77 @@ class DataPreprocessor:
 
         print("BMI Feature Added.")
 
+
+    # ==========================================================
+    # Build Preprocessor
+    # ==========================================================
+
+    @staticmethod
+    def build_preprocessor() -> ColumnTransformer:
+        """
+        Create the preprocessing pipeline.
+
+        Numerical Features
+            - Median Imputation
+            - Standard Scaling
+
+        Categorical Features
+            - Most Frequent Imputation
+            - One Hot Encoding
+
+        Returns
+        -------
+        ColumnTransformer
+            Unfitted preprocessing object.
+        """
+
+        numeric_pipeline = Pipeline(
+            steps=[
+                (
+                    "imputer",
+                    SimpleImputer(strategy="median"),
+                ),
+                (
+                    "scaler",
+                    StandardScaler(),
+                ),
+            ]
+        )
+
+        categorical_pipeline = Pipeline(
+            steps=[
+                (
+                    "imputer",
+                    SimpleImputer(strategy="most_frequent"),
+                ),
+                (
+                    "encoder",
+                    OneHotEncoder(
+                        handle_unknown="ignore",
+                        sparse_output=False,
+                    ),
+                ),
+            ]
+        )
+
+        preprocessor = ColumnTransformer(
+            transformers=[
+                (
+                    "numerical",
+                    numeric_pipeline,
+                    NUMERICAL_FEATURES,
+                ),
+                (
+                    "categorical",
+                    categorical_pipeline,
+                    CATEGORICAL_FEATURES,
+                ),
+            ],
+            remainder="drop",
+        )
+
+        return preprocessor
+
     # ==========================================================
     # Target Encoding
     # ==========================================================
@@ -147,6 +227,28 @@ class DataPreprocessor:
             self.df[TARGET_COLUMN].astype(int)
         )
 
+    def preprocess(self):
+
+        self.load_data()
+
+        self.validate_dataset()
+
+        self.clean_data()
+
+        self.feature_engineering()
+
+        self.encode_target()
+
+        self.dataset_summary()
+
+        train_df, test_df = self.split_dataset()
+
+        self.save_processed_data(
+            train_df,
+            test_df,
+        )
+
+        print("\nPreprocessing Completed Successfully!")
     # ==========================================================
     # Train Test Split
     # ==========================================================
