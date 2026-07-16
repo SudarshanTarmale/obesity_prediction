@@ -6,6 +6,7 @@ performance reports.
 """
 
 from pathlib import Path
+from xml.parsers.expat import model
 
 import pandas as pd
 
@@ -86,13 +87,14 @@ class ModelEvaluator:
         return metrics
     
     @staticmethod
+
     def save_classification_report(
         model,
         X_test,
         y_test,
     ):
         """
-        Save classification report.
+        Save a clean classification report containing only the obesity classes.
         """
 
         predictions = model.predict(X_test)
@@ -113,15 +115,60 @@ class ModelEvaluator:
 
         )
 
+        report_df = pd.DataFrame(report).transpose()
+
+        # Keep only class rows
+        report_df = report_df.loc[TARGET_CLASSES]
+
+        report_df.reset_index(inplace=True)
+
+        report_df.rename(
+            columns={"index": "Class"},
+            inplace=True,
+        )
+
         create_directories()
 
-        pd.DataFrame(report).transpose().to_csv(
-
+        report_df.to_csv(
             CLASSIFICATION_REPORT_FILE,
-
-            index=True,
-
+            index=False,
         )
+    # def save_classification_report(
+    #     model,
+    #     X_test,
+    #     y_test,
+    # ):
+    #     """
+    #     Save classification report.
+    #     """
+
+    #     predictions = model.predict(X_test)
+
+    #     report = classification_report(
+
+    #         y_test,
+
+    #         predictions,
+
+    #         labels=range(len(TARGET_CLASSES)),
+
+    #         target_names=TARGET_CLASSES,
+
+    #         output_dict=True,
+
+    #         zero_division=0,
+
+    #     )
+
+    #     create_directories()
+
+    #     pd.DataFrame(report).transpose().to_csv(
+
+    #         CLASSIFICATION_REPORT_FILE,
+
+    #         index=True,
+
+    #     )
 
     @staticmethod
     def get_confusion_matrix(

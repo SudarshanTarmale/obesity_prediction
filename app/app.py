@@ -7,11 +7,11 @@ Author: Sudarshan Tarmale
 import streamlit as st
 from streamlit_option_menu import option_menu
 
-from pages.home import show_home
-from pages.analysis import show_analysis
-from pages.performance import show_performance
-from pages.prediction import show_prediction
-from pages.recommendation import show_recommendations
+from views.home import show_home
+from views.analysis import show_analysis
+from views.performance import show_performance
+from views.prediction import show_prediction
+from views.recommendations import show_recommendations
 
 
 # ============================================================
@@ -54,16 +54,16 @@ with st.sidebar:
         options=[
             "Home",
             "Prediction",
+            "Recommendations",
             "Model Performance",
             "Data Analysis",
-            "Recommendations",
         ],
         icons=[
             "house-fill",
             "magic",
+            "clipboard-check",
             "graph-up-arrow",
             "bar-chart-fill",
-            "clipboard-check",
         ],
         menu_icon="activity",
         default_index=0,
@@ -110,6 +110,10 @@ elif selected == "Prediction":
 
     show_prediction()
 
+elif selected == "Recommendations":
+
+    show_recommendations()
+
 elif selected == "Model Performance":
 
     show_performance()
@@ -117,7 +121,3 @@ elif selected == "Model Performance":
 elif selected == "Data Analysis":
 
     show_analysis()
-
-elif selected == "Recommendations":
-
-    show_recommendations()
