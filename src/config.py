@@ -18,6 +18,8 @@ PROCESSED_DATA_DIR = DATA_DIR / "processed"
 
 MODEL_DIR = BASE_DIR / "models"
 
+REPORTS_DIR = BASE_DIR / "reports"      
+
 # -----------------------------------------------------------------------------
 # Saved Artifacts
 # -----------------------------------------------------------------------------
@@ -29,6 +31,10 @@ SCALER_FILE = MODEL_DIR / "scaler.pkl"
 LABEL_ENCODERS_FILE = MODEL_DIR / "label_encoders.pkl"
 
 TARGET_ENCODER_FILE = MODEL_DIR / "target_encoder.pkl"
+
+MODEL_METRICS = REPORTS_DIR / "model_metrics.csv"
+
+FEATURE_IMPORTANCE = REPORTS_DIR / "feature_importance.csv"
 
 # -----------------------------------------------------------------------------
 # Dataset Split
