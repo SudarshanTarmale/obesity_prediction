@@ -4,6 +4,7 @@ matplotlib
 seaborn
 plotly
 streamlit
+streamlit-option-menu
 scikit-learn
 xgboost
 joblib
