@@ -1,45 +1,119 @@
 """
 Project Configuration
+
+Central configuration file for the Obesity Prediction project.
+Contains all project paths, constants, feature definitions,
+and model settings.
 """
 
 from pathlib import Path
 
-# -----------------------------------------------------------------------------
-# Paths
-# -----------------------------------------------------------------------------
+# =============================================================================
+# PROJECT PATHS
+# =============================================================================
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 DATA_DIR = BASE_DIR / "data"
 
-RAW_DATA = DATA_DIR / "raw" / "ObesityDataSet_raw_and_data_sinthetic.csv"
+RAW_DATA_PATH = DATA_DIR / "raw" / "ObesityDataSet_raw_and_data_sinthetic.csv"
 
 PROCESSED_DATA_DIR = DATA_DIR / "processed"
 
 MODEL_DIR = BASE_DIR / "models"
 
-REPORTS_DIR = BASE_DIR / "reports"      
+REPORTS_DIR = BASE_DIR / "reports"
 
-# -----------------------------------------------------------------------------
-# Saved Artifacts
-# -----------------------------------------------------------------------------
+PLOTS_DIR = REPORTS_DIR / "plots"
 
-MODEL_FILE = MODEL_DIR / "obesity_model.pkl"
+# =============================================================================
+# SAVED ARTIFACTS
+# =============================================================================
 
-SCALER_FILE = MODEL_DIR / "scaler.pkl"
+PIPELINE_FILE = MODEL_DIR / "obesity_pipeline.pkl"
 
-LABEL_ENCODERS_FILE = MODEL_DIR / "label_encoders.pkl"
+MODEL_METRICS_FILE = REPORTS_DIR / "model_metrics.csv"
 
-TARGET_ENCODER_FILE = MODEL_DIR / "target_encoder.pkl"
+FEATURE_IMPORTANCE_FILE = REPORTS_DIR / "feature_importance.csv"
 
-MODEL_METRICS = REPORTS_DIR / "model_metrics.csv"
+CLASSIFICATION_REPORT_FILE = REPORTS_DIR / "classification_report.csv"
 
-FEATURE_IMPORTANCE = REPORTS_DIR / "feature_importance.csv"
+# =============================================================================
+# DATASET SETTINGS
+# =============================================================================
 
-# -----------------------------------------------------------------------------
-# Dataset Split
-# -----------------------------------------------------------------------------
+TARGET_COLUMN = "NObeyesdad"
 
 TEST_SIZE = 0.20
 
 RANDOM_STATE = 42
+
+CV_FOLDS = 5
+
+# =============================================================================
+# FEATURE DEFINITIONS
+# =============================================================================
+
+NUMERICAL_FEATURES = [
+
+    "Age",
+
+    "Height",
+
+    "Weight",
+
+    "FCVC",
+
+    "NCP",
+
+    "CH2O",
+
+    "FAF",
+
+    "TUE",
+
+    "BMI"
+
+]
+
+CATEGORICAL_FEATURES = [
+
+    "Gender",
+
+    "family_history_with_overweight",
+
+    "FAVC",
+
+    "CAEC",
+
+    "SMOKE",
+
+    "SCC",
+
+    "CALC",
+
+    "MTRANS"
+
+]
+
+# =============================================================================
+# TARGET CLASSES
+# =============================================================================
+
+TARGET_CLASSES = [
+
+    "Insufficient_Weight",
+
+    "Normal_Weight",
+
+    "Overweight_Level_I",
+
+    "Overweight_Level_II",
+
+    "Obesity_Type_I",
+
+    "Obesity_Type_II",
+
+    "Obesity_Type_III"
+
+]
