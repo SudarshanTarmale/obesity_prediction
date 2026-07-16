@@ -103,6 +103,8 @@ class ModelEvaluator:
 
             predictions,
 
+            labels=range(len(TARGET_CLASSES)),
+
             target_names=TARGET_CLASSES,
 
             output_dict=True,
