@@ -1,9 +1,14 @@
 """
-Train multiple machine learning models and automatically
-save the best performing model.
+Model Training Module
 
-Author: Your Name
+Builds preprocessing pipelines, trains multiple machine learning
+models, compares their performance using cross-validation,
+and prepares the best pipeline for deployment.
+
+Author: Sudarshan Tarmale
 """
+
+from pathlib import Path
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -11,49 +16,241 @@ warnings.filterwarnings("ignore")
 import joblib
 import pandas as pd
 
+from sklearn.pipeline import Pipeline
+from sklearn.compose import ColumnTransformer
+
+from sklearn.impute import SimpleImputer
+
+from sklearn.preprocessing import (
+    OneHotEncoder,
+    StandardScaler,
+)
+
+from sklearn.model_selection import (
+    StratifiedKFold,
+    cross_val_score,
+)
+
 from sklearn.linear_model import LogisticRegression
 
 from sklearn.tree import DecisionTreeClassifier
 
 from sklearn.ensemble import RandomForestClassifier
 
-from sklearn.metrics import (
-    accuracy_score,
-    precision_score,
-    recall_score,
-    f1_score,
-)
-
 from xgboost import XGBClassifier
 
-from src.config import *
+from src.config import (
 
-# ----------------------------------------------------------
+    PROCESSED_DATA_DIR,
+
+    TARGET_COLUMN,
+
+    NUMERICAL_FEATURES,
+
+    CATEGORICAL_FEATURES,
+
+    RANDOM_STATE,
+
+    CV_FOLDS,
+
+    MODEL_METRICS_FILE,
+
+    FEATURE_IMPORTANCE_FILE,
+
+    PIPELINE_FILE,
+)
+
+from src.utils import create_directories
+
+from src.evaluator import ModelEvaluator
 
 
 class ModelTrainer:
+    """
+    Train, compare and evaluate multiple ML models.
+    """
 
     def __init__(self):
 
-        self.models = {
+        create_directories()
+
+        self.train_df = pd.read_csv(
+            PROCESSED_DATA_DIR / "train.csv"
+        )
+
+        self.test_df = pd.read_csv(
+            PROCESSED_DATA_DIR / "test.csv"
+        )
+
+        self.results = []
+
+        self.best_pipeline = None
+
+        self.best_score = 0.0
+
+        self.best_model_name = ""
+
+    # ======================================================
+    # Feature Split
+    # ======================================================
+
+    def split_features(self):
+
+        X_train = self.train_df.drop(
+            columns=[TARGET_COLUMN]
+        )
+
+        y_train = self.train_df[TARGET_COLUMN]
+
+        X_test = self.test_df.drop(
+            columns=[TARGET_COLUMN]
+        )
+
+        y_test = self.test_df[TARGET_COLUMN]
+
+        return (
+
+            X_train,
+
+            X_test,
+
+            y_train,
+
+            y_test,
+
+        )
+
+    # ======================================================
+    # Build Preprocessor
+    # ======================================================
+
+    @staticmethod
+    def build_preprocessor():
+
+        numeric_pipeline = Pipeline(
+
+            steps=[
+
+                (
+
+                    "imputer",
+
+                    SimpleImputer(
+
+                        strategy="median"
+
+                    )
+
+                ),
+
+                (
+
+                    "scaler",
+
+                    StandardScaler()
+
+                ),
+
+            ]
+
+        )
+
+        categorical_pipeline = Pipeline(
+
+            steps=[
+
+                (
+
+                    "imputer",
+
+                    SimpleImputer(
+
+                        strategy="most_frequent"
+
+                    )
+
+                ),
+
+                (
+
+                    "encoder",
+
+                    OneHotEncoder(
+
+                        handle_unknown="ignore"
+
+                    )
+
+                ),
+
+            ]
+
+        )
+
+        preprocessor = ColumnTransformer(
+
+            transformers=[
+
+                (
+
+                    "numerical",
+
+                    numeric_pipeline,
+
+                    NUMERICAL_FEATURES,
+
+                ),
+
+                (
+
+                    "categorical",
+
+                    categorical_pipeline,
+
+                    CATEGORICAL_FEATURES,
+
+                ),
+
+            ]
+
+        )
+
+        return preprocessor
+
+    # ======================================================
+    # Model Registry
+    # ======================================================
+
+    @staticmethod
+    def get_models():
+
+        return {
 
             "Logistic Regression":
 
-                LogisticRegression(max_iter=1000),
+                LogisticRegression(
+
+                    max_iter=1000,
+
+                    random_state=RANDOM_STATE,
+
+                ),
 
             "Decision Tree":
 
                 DecisionTreeClassifier(
-                    random_state=RANDOM_STATE
+
+                    random_state=RANDOM_STATE,
+
                 ),
 
             "Random Forest":
 
                 RandomForestClassifier(
 
-                    random_state=RANDOM_STATE,
+                    n_estimators=300,
 
-                    n_estimators=300
+                    random_state=RANDOM_STATE,
 
                 ),
 
@@ -63,220 +260,370 @@ class ModelTrainer:
 
                     random_state=RANDOM_STATE,
 
-                    eval_metric="mlogloss"
+                    eval_metric="mlogloss",
 
-                )
+                ),
 
         }
 
-        self.results = []
+    # ======================================================
+    # Build Pipeline
+    # ======================================================
 
-    # ------------------------------------------------------
+    @staticmethod
+    def build_pipeline(
 
-    def load_data(self):
+        preprocessor,
 
-        X_train = pd.read_csv(
-            PROCESSED_DATA_DIR / "X_train.csv"
-        )
-
-        X_test = pd.read_csv(
-            PROCESSED_DATA_DIR / "X_test.csv"
-        )
-
-        y_train = pd.read_csv(
-            PROCESSED_DATA_DIR / "y_train.csv"
-        ).values.ravel()
-
-        y_test = pd.read_csv(
-            PROCESSED_DATA_DIR / "y_test.csv"
-        ).values.ravel()
-
-        return X_train, X_test, y_train, y_test
-
-    # ------------------------------------------------------
-
-    def evaluate(
-
-        self,
-
-        name,
-
-        model,
-
-        X_test,
-
-        y_test
+        classifier,
 
     ):
 
-        prediction = model.predict(X_test)
+        return Pipeline(
 
-        accuracy = accuracy_score(
-            y_test,
-            prediction
-        )
+            steps=[
 
-        precision = precision_score(
+                (
 
-            y_test,
+                    "preprocessor",
 
-            prediction,
+                    preprocessor,
 
-            average="weighted"
+                ),
 
-        )
+                (
 
-        recall = recall_score(
+                    "classifier",
 
-            y_test,
+                    classifier,
 
-            prediction,
+                ),
 
-            average="weighted"
+            ]
 
         )
 
-        f1 = f1_score(
+    # ======================================================
+    # Cross Validation
+    # ======================================================
 
-            y_test,
+    @staticmethod
+    def cross_validate(
 
-            prediction,
+        pipeline,
 
-            average="weighted"
+        X_train,
+
+        y_train,
+
+    ):
+
+        cv = StratifiedKFold(
+
+            n_splits=CV_FOLDS,
+
+            shuffle=True,
+
+            random_state=RANDOM_STATE,
 
         )
 
-        self.results.append({
+        scores = cross_val_score(
 
-            "Model": name,
+            pipeline,
 
-            "Accuracy": round(accuracy, 4),
+            X_train,
 
-            "Precision": round(precision, 4),
+            y_train,
 
-            "Recall": round(recall, 4),
+            cv=cv,
 
-            "F1 Score": round(f1, 4)
+            scoring="accuracy",
 
-        })
+            n_jobs=-1,
 
-        return accuracy
+        )
 
-    # ------------------------------------------------------
+        return scores.mean()
 
-    def train(self):
+    # ======================================================
+    # Train All Models
+    # ======================================================
 
-        X_train, X_test, y_train, y_test = self.load_data()
+    def train_models(self):
 
-        best_model = None
+        X_train, X_test, y_train, y_test = (
 
-        best_accuracy = 0
+            self.split_features()
 
-        best_name = ""
+        )
 
-        for name, model in self.models.items():
+        preprocessor = self.build_preprocessor()
 
-            print(f"\nTraining {name}...")
+        models = self.get_models()
 
-            model.fit(
+        for model_name, classifier in models.items():
+
+            print(f"\nTraining {model_name}...")
+
+            pipeline = self.build_pipeline(
+
+                preprocessor,
+
+                classifier,
+
+            )
+
+            cv_accuracy = self.cross_validate(
+
+                pipeline,
 
                 X_train,
 
-                y_train
+                y_train,
 
             )
 
-            accuracy = self.evaluate(
+            pipeline.fit(
 
-                name,
+                X_train,
 
-                model,
+                y_train,
+
+            )
+
+            print(
+
+                f"Cross Validation Accuracy : "
+
+                f"{cv_accuracy:.4f}"
+
+            )
+
+            if cv_accuracy > self.best_score:
+
+                self.best_score = cv_accuracy
+
+                self.best_pipeline = pipeline
+
+                self.best_model_name = model_name
+
+    # ======================================================
+    # Evaluate Models
+    # ======================================================
+
+    def evaluate_models(self):
+
+        X_train, X_test, y_train, y_test = self.split_features()
+
+        preprocessor = self.build_preprocessor()
+
+        models = self.get_models()
+
+        self.results = []
+
+        for model_name, classifier in models.items():
+
+            print(f"\nEvaluating {model_name}...")
+
+            pipeline = self.build_pipeline(
+
+                preprocessor,
+
+                classifier,
+
+            )
+
+            pipeline.fit(
+
+                X_train,
+
+                y_train,
+
+            )
+
+            metrics = ModelEvaluator.evaluate(
+
+                pipeline,
 
                 X_test,
 
-                y_test
+                y_test,
 
             )
 
-            if accuracy > best_accuracy:
+            metrics["Model"] = model_name
 
-                best_accuracy = accuracy
+            metrics["Cross Validation"] = self.cross_validate(
 
-                best_model = model
+                pipeline,
 
-                best_name = name
+                X_train,
 
-        print("\nBest Model :", best_name)
+                y_train,
 
-        print("Accuracy :", round(best_accuracy, 4))
+            )
 
-        joblib.dump(
+            self.results.append(metrics)
 
-            best_model,
+            if model_name == self.best_model_name:
 
-            MODEL_FILE
+                ModelEvaluator.save_classification_report(
 
-        )
+                    pipeline,
 
-        metrics = pd.DataFrame(
+                    X_test,
+
+                    y_test,
+
+                )
+
+                importance = (
+
+                    ModelEvaluator.get_feature_importance(
+
+                        pipeline,
+
+                    )
+
+                )
+
+                if importance is not None:
+
+                    importance.to_csv(
+
+                        FEATURE_IMPORTANCE_FILE,
+
+                        index=False,
+
+                    )
+
+
+
+                        # ======================================================
+    # Save Metrics
+    # ======================================================
+
+    def save_metrics(self):
+
+        metrics_df = pd.DataFrame(
 
             self.results
 
         )
 
-        metrics.to_csv(
+        metrics_df = metrics_df[
 
-            MODEL_METRICS,
+            [
 
-            index=False
+                "Model",
+
+                "Accuracy",
+
+                "Precision",
+
+                "Recall",
+
+                "F1 Score",
+
+                "Cross Validation",
+
+            ]
+
+        ]
+
+        metrics_df.sort_values(
+
+            by="Cross Validation",
+
+            ascending=False,
+
+            inplace=True,
 
         )
 
-        if hasattr(
+        metrics_df.to_csv(
 
-            best_model,
+            MODEL_METRICS_FILE,
 
-            "feature_importances_"
+            index=False,
 
-        ):
+        )
 
-            importance = pd.DataFrame({
-
-                "Feature":
-
-                    X_train.columns,
-
-                "Importance":
-
-                    best_model.feature_importances_
-
-            })
-
-            importance.sort_values(
-
-                by="Importance",
-
-                ascending=False,
-
-                inplace=True
-
-            )
-
-            importance.to_csv(
-
-                FEATURE_IMPORTANCE,
-
-                index=False
-
-            )
-
-        print("\nTraining Completed Successfully")
+        print("\nModel metrics saved.")
 
 
-# ----------------------------------------------------------
+
+
+
+            # ======================================================
+    # Save Best Pipeline
+    # ======================================================
+
+    def save_pipeline(self):
+
+        joblib.dump(
+
+            self.best_pipeline,
+
+            PIPELINE_FILE,
+
+        )
+
+        print(
+
+            f"\nBest Model : {self.best_model_name}"
+
+        )
+
+        print(
+
+            f"Cross Validation : "
+
+            f"{self.best_score:.4f}"
+
+        )
+
+        print(
+
+            "\nPipeline saved successfully."
+
+        )
+
+
+
+
+            # ======================================================
+    # Execute
+    # ======================================================
+
+    def run(self):
+
+        print("=" * 60)
+
+        print("Training Machine Learning Models")
+
+        print("=" * 60)
+
+        self.train_models()
+
+        self.evaluate_models()
+
+        self.save_metrics()
+
+        self.save_pipeline()
+
+        print("\nTraining Completed Successfully!")
+
+
+
+
+        # ==========================================================
+# Main
+# ==========================================================
 
 if __name__ == "__main__":
 
     trainer = ModelTrainer()
 
-    trainer.train()
+    trainer.run()
