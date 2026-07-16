@@ -242,23 +242,19 @@ The Streamlit dashboard includes the following sections:
 
 ## 📷 Screenshots
 
-Add screenshots of your application here after deployment.
-
-Example:
+The screenshots are stored in the `app/assets/` directory.
 
 ```text
-README/
-│
-├── home.png
-├── prediction.png
-├── performance.png
-└── analysis.png
-
+project/
+│── README.md
+│── app/
+│   └── assets/
+│       ├── home.png
+│       ├── prediction.png
+│       ├── performance.png
+│       └── analysis.png
 ```
 
-Then include:
-
-```markdown
 ### Home
 
 ![Home](app/assets/home.png)
@@ -269,14 +265,11 @@ Then include:
 
 ### Model Performance
 
-![Performance](app/assets/performance.png)
+![Model Performance](app/assets/performance.png)
 
 ### Data Analysis
 
-![Performance](app/assets/analysis.png)
-```
-
----
+![Data Analysis](app/assets/analysis.png)
 
 ## 📌 Future Improvements
 
@@ -301,9 +294,9 @@ Then include:
 
 ## 👨‍💻 Author
 
-**Sudarshan**
+**Sudarshan Tarmale**
 
-Master's Student – Data Science / Machine Learning
+Master's Student – Data Science
 
 GitHub: https://github.com/SudarshanTarmale
 
@@ -313,4 +306,4 @@ LinkedIn: https://www.linkedin.com/in/sudarshan-tarmale/
 
 ## 📄 License
 
-This project is licensed under the MIT License.
+This project is licensed under the [MIT License](LICENSE).
