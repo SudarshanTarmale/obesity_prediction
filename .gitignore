@@ -14,7 +14,7 @@ venv/
 .vscode/
 
 # Models
-models/*.pkl
+# models/*.pkl
 
 # Processed Data
 data/processed/
